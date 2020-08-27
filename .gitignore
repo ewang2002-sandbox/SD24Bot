@@ -1,0 +1,8 @@
+# compiled files
+out/
+
+# node modules
+node_modules/
+
+# dotenv file
+.env

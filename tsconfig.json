@@ -1,0 +1,17 @@
+{
+	"compilerOptions": {
+		"target": "ESNext",
+		"module": "commonjs",
+		"sourceMap": false,
+		"outDir": "./out",
+		"rootDir": "./src",
+		"strict": true,
+		"noUnusedParameters": false,
+		"allowSyntheticDefaultImports": true,
+		"resolveJsonModule": true
+	},
+	"exclude": [
+		"test/",
+		"archive/"
+	]
+}
