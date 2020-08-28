@@ -3,8 +3,21 @@ import { reactFaster } from "./fast-react";
 import { time } from "console";
 
 export module CollectorManager {
-    export async function getEmoji(botMsg: Message, origMsg: Message, emojis: EmojiResolvable[], time: number = 5 * 60 * 1000): Promise<Emoji | "-cancel"> {
+    export interface IOptionalArgs {
+        time?: number;
+        removeAllEmojisAfter?: boolean;
+    }
+
+    export async function getEmoji(
+        botMsg: Message,
+        origMsg: Message,
+        emojis: EmojiResolvable[],
+        optArgs: IOptionalArgs = {}
+    ): Promise<Emoji | "-cancel"> {
         return new Promise(async (resolve) => {
+            const time: number = typeof optArgs.time === "undefined" ? 5 * 60 * 1000 : optArgs.time;
+            const removeAllEmojisAfter: boolean = typeof optArgs.removeAllEmojisAfter === "undefined" ? true : optArgs.removeAllEmojisAfter;
+
             reactFaster(origMsg, emojis);
 
             const reactCollector: ReactionCollector = new ReactionCollector(
@@ -16,12 +29,17 @@ export module CollectorManager {
                 }
             );
 
-            reactCollector.on("collect", (react: MessageReaction, user: User) => {
+            reactCollector.on("collect", async (react: MessageReaction, user: User) => {
+                if (!removeAllEmojisAfter)
+                    await react.users.remove(user).catch(e => { });
+
                 return resolve(react.emoji);
             });
 
             reactCollector.on("end", (collected: Collection<string, MessageReaction>, reason: string) => {
-                botMsg.reactions.removeAll().catch(e => { });
+                if (removeAllEmojisAfter)
+                    botMsg.reactions.removeAll().catch(e => { });
+
                 if (reason === "time") {
                     return resolve("-cancel");
                 }
@@ -29,8 +47,16 @@ export module CollectorManager {
         });
     }
 
-    export async function getEitherEmojiOrString(botMsg: Message, origMsg: Message, emojis: EmojiResolvable[], time: number = 5 * 60 * 1000): Promise<string | Emoji> {
+    export async function getEitherEmojiOrString(
+        botMsg: Message,
+        origMsg: Message,
+        emojis: EmojiResolvable[],
+        optArgs: IOptionalArgs = {}
+    ): Promise<string | Emoji> {
         return new Promise(async (resolve) => {
+            const time: number = typeof optArgs.time === "undefined" ? 5 * 60 * 1000 : optArgs.time;
+            const removeAllEmojisAfter: boolean = typeof optArgs.removeAllEmojisAfter === "undefined" ? true : optArgs.removeAllEmojisAfter;
+
             reactFaster(origMsg, emojis);
 
             const msgCollector: MessageCollector = new MessageCollector(
@@ -59,7 +85,9 @@ export module CollectorManager {
                 return resolve(inMsg.content);
             });
 
-            reactCollector.on("collect", (react: MessageReaction, user: User) => {
+            reactCollector.on("collect", async (react: MessageReaction, user: User) => {
+                if (!removeAllEmojisAfter)
+                    await react.users.remove(user).catch(e => { });
                 msgCollector.stop("user_ended");
                 return resolve(react.emoji);
             });
@@ -71,7 +99,8 @@ export module CollectorManager {
             });
 
             reactCollector.on("end", (collected: Collection<string, MessageReaction>, reason: string) => {
-                botMsg.reactions.removeAll().catch(e => { });
+                if (removeAllEmojisAfter)
+                    botMsg.reactions.removeAll().catch(e => { });
                 if (reason === "time") {
                     return resolve("-cancel");
                 }

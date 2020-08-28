@@ -226,11 +226,10 @@ export class GetCapeData extends Command {
         specificResults = specificResults
             .filter(x => x.Instructor === selectInstructor);
 
-        console.log(specificResults);
         const displayEmbed: MessageEmbed = new MessageEmbed()
             .setTitle("CAPE Search Results")
             .setDescription(`__Specified Criteria__\n⇒ **Instructor:** \`${capeInput.instructor === "" ? "N/A" : capeInput.instructor}\`\n⇒ **Course:** \`${capeInput.course === "" ? "N/A" : capeInput.course}\`\n⇒ **Subject:** \`${capeInput.subject === "" ? "N/A" : capeInput.subject}\`\n\n__Search Result__\n⇒ **Instructor:** \`${selectInstructor}\`\n⇒ **Course:** \`${selectCourse}\`\n⇒ **Specific CAPEs:** \`${specificResults.length}\`\n⇒ **Evaluations:** \`${specificResults.map(x => x.EvalsMade).reduce((a, b) => a + b, 0)}\``)
-            .setFooter("σ may not be very accurate!")
+            .setFooter("DISCLAIMER: What you see above may not be entirely accurate and is intended solely as a guide. Please use CAPE or Seascape (https://seascape.app/) to confirm the data shown above.")
             .setColor(0x000080);
 
         const rcmdProf: [number, number] = this.getAverageAndStd(specificResults, "RecommendInstructor");
@@ -261,12 +260,12 @@ export class GetCapeData extends Command {
         const rankClass: string = this.getRankString(dataOtherProf, selectInstructor, 1);
         const rankHrWk: string = this.getRankString(dataOtherProf, selectInstructor, 2);
 
-        displayEmbed.addField("Recommend Professor", "```\n" + (`μ = ${rcmdProf[0].toFixed(3)}%\nσ = ${rcmdProf[1].toFixed(3)}`) + "```", true)
-            .addField("Recommend Class", "```\n" + (`μ = ${rcmdClass[0].toFixed(3)}%\nσ = ${rcmdClass[1].toFixed(3)}`) + "```", true)
-            .addField("Average Study Hours", "```\n" + (`μ = ${avgStudyHrs[0].toFixed(3)} Hrs/Week\nσ = ${avgStudyHrs[1].toFixed(3)}`) + "```")
-            .addField("Rcmd. Prof. Rank", "```\n" + (rankProf) + "```")
-            .addField("Rcmd. Clas. Rank", "```\n" + (rankClass) + "```")
-            .addField("Aveg. Hours Rank", "```\n" + (rankHrWk) + "```")
+        displayEmbed.addField("Recommend Professor", "```\n" + (`${rcmdProf[0].toFixed(3)}%`) + "```", true)
+            .addField("Recommend Class", "```\n" + (`${rcmdClass[0].toFixed(3)}%`) + "```", true)
+            .addField("Average Study Hours", "```\n" + (`${avgStudyHrs[0].toFixed(3)} Hrs/Week`) + "```")
+            .addField("Recommended Professor Rank", "```\n" + (rankProf) + "```")
+            .addField("Recommended Class Rank", "```\n" + (rankClass) + "```")
+            .addField("Average Study Hours/Week Rank", "```\n" + (rankHrWk) + "```")
             .addField("Raw Rcmd. Prof.", "```\n" + (`${specificResults.map(x => `${x.Term} ${x.RecommendInstructor}% (${x.EvalsMade})`).join("\n")}`) + "```", true)
             .addField("Raw Rcmd. Clas.", "```\n" + (`${specificResults.map(x => `${x.Term} ${x.RecommendClass}% (${x.EvalsMade})`).join("\n")}`) + "```", true)
             .addField("Raw Study Hr/Wk.", "```\n" + (`${specificResults.map(x => `${x.Term} ${x.StudyHrsWk} (${x.EvalsMade})`).join("\n")}`) + "```", true);
@@ -275,7 +274,7 @@ export class GetCapeData extends Command {
     }
 
     private getRankString(dataOtherProf: Collection<string, [number, number, number]>, selectInstructor: string, index: number): string {
-        const ending: string = index === 2 
+        const ending: string = index === 2
             ? ""
             : "%";
         dataOtherProf.sort(index === 2
@@ -303,7 +302,7 @@ export class GetCapeData extends Command {
         }
         else {
             for (let i = 0; i < rankArrProf.length; i++) {
-                rankStrProf += `[${i + 1}] ${rankArrProf[i][0]} (${rankArrProf[i][1][index].toFixed(2)}${ending})\n`;
+                rankStrProf += `[${i + 1}] ${rankArrProf[i][0]} (${rankArrProf[i][1][index].toFixed(2)}${ending}) ${rankArrProf[i][0] === selectInstructor ? "⭐" : ""}\n`;
             }
         }
 
@@ -464,7 +463,7 @@ export class GetCapeData extends Command {
                 .addField("Set Subject", `React to the 🏫 emoji if you want to select the subject to look up.\n⇒ **Current Subject Set:** \`${capeInput.subject === "" ? "N/A" : capeInput.subject}\``)
                 .addField("Set Instructor", `React to the 🙆 emoji if you want to select an instructor to look up.\n⇒ **Current Instructor Set:** \`${capeInput.instructor === "" ? "N/A" : capeInput.instructor}\``)
                 .addField("Set Course Number", `React to the 📝 emoji if you want to select a course number to look up.\n⇒ **Current Course Set:** \`${capeInput.course === "" ? "N/A" : capeInput.course}\``)
-                .addField(capeInput.viewType ? "Set Detailed" : "Set Concise", `React to the 🔹 emoji if you want to make the results ${capeInput.viewType ? "detailed" : "concise"}.`)
+                .addField("Change Display Type", `React to the 🔹 emoji if you want the bot to either display the most recent CAPEs or a summary of all CAPEs.\n⇒ **Display Type:** \`${capeInput.viewType === "ALL" ? "Recent CAPEs" : "Summary"}\``)
                 .setFooter(canSearch ? "🟢 Able to Search" : "🔴 Unable to Search");
             if (canSearch) {
                 embed.addField("Search", "React to the ✅ emoji if you want to search using the specified criteria above.");
@@ -473,6 +472,7 @@ export class GetCapeData extends Command {
             return embed;
         }
 
+        let hasReacted: boolean = false;
         while (true) {
             botMsg = botMsg === null
                 ? await msg.channel.send(createEmbed())
@@ -482,42 +482,62 @@ export class GetCapeData extends Command {
             if (capeInput.course !== "" || capeInput.instructor !== "")
                 reactions.push("✅");
 
-            for (const emoji of reactions)
-                await botMsg.react(emoji).catch(e => { });
+            if (hasReacted) {
+                if (reactions.indexOf("✅") !== -1) {
+                    await botMsg.react("✅").catch(e => { });
+                }
+            }
+            else {
+                for (const emoji of reactions)
+                    await botMsg.react(emoji).catch(e => { });
+                
+                hasReacted = !hasReacted;
+            }
 
-            const choice: Emoji | "-cancel" = await CollectorManager.getEmoji(botMsg, msg, reactions);
+            const choice: Emoji | "-cancel" = await CollectorManager.getEmoji(botMsg, msg, reactions, {
+                removeAllEmojisAfter: false
+            });
             if (choice === "-cancel" || choice.name === "❌") {
                 await botMsg.delete().catch(e => { });
                 return "-cancel";
             }
             else if (choice.name === "🏫") {
+                await botMsg.reactions.removeAll().catch(e => { });
                 const out: ICapeInput | "CANCEL" = await this.getSubject(botMsg, msg, capeInput);
                 if (out === "CANCEL") {
                     await botMsg.delete().catch(e => { });
                     return "-cancel";
                 }
-
+                hasReacted = false; 
                 capeInput = out;
             }
             else if (choice.name === "🙆") {
+                await botMsg.reactions.removeAll().catch(e => { });
                 const out: ICapeInput | "CANCEL" = await this.getInstructor(botMsg, msg, capeInput);
                 if (out === "CANCEL") {
                     await botMsg.delete().catch(e => { });
                     return "-cancel";
                 }
-
+                hasReacted = false; 
                 capeInput = out;
             }
             else if (choice.name === "📝") {
+                await botMsg.reactions.removeAll().catch(e => { });
                 const out: ICapeInput | "CANCEL" = await this.getCourseNumber(botMsg, msg, capeInput);
                 if (out === "CANCEL") {
                     await botMsg.delete().catch(e => { });
                     return "-cancel";
                 }
-
+                hasReacted = false; 
                 capeInput = out;
             }
+            else if (choice.name === "🔹") {
+                capeInput.viewType = capeInput.viewType === "ALL"
+                    ? "SPECIAL"
+                    : "ALL";
+            }
             else if (choice.name === "✅" && reactions.includes("✅")) {
+                await botMsg.reactions.removeAll().catch(e => { });
                 await botMsg.delete().catch(e => { });
                 return capeInput;
             }
