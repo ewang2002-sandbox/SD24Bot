@@ -335,8 +335,8 @@ export class GetCapeData extends Command {
                 .addField("Raw Rcmd. Prof.", "```\n" + (`${specificResults.map(x => `${x.Term} ${x.RecommendInstructor.toFixed(2)}% (${x.EvalsMade})`).join("\n")}`) + "```", true)
                 .addField("Raw Rcmd. Clas.", "```\n" + (`${specificResults.map(x => `${x.Term} ${x.RecommendClass.toFixed(2)}% (${x.EvalsMade})`).join("\n")}`) + "```", true)
                 .addField("Raw Study Hr/Wk.", "```\n" + (`${specificResults.map(x => `${x.Term} ${x.StudyHrsWk.toFixed(2)} (${x.EvalsMade}/${x.Enrolled})`).join("\n")}`) + "```", true)
-                .addField("Raw GPA Expected", "```\n" + (`${specificResults.map(x => `${x.Term} ${x.AverageGradeExpected.toFixed(2)} (${x.EvalsMade}/${x.Enrolled})`).join("\n")}`) + "```", true)
-                .addField("Raw GPA Received", "```\n" + (`${specificResults.map(x => `${x.Term} ${x.AverageGradeReceived.toFixed(2)} (${x.EvalsMade}/${x.Enrolled})`).join("\n")}`) + "```", true);
+                .addField("Raw GPA Expected", "```\n" + (`${specificResults.map(x => `${x.Term} ${x.AverageGradeExpected === -1 ? "N/A" : x.AverageGradeExpected.toFixed(2)} (${x.EvalsMade}/${x.Enrolled})`).join("\n")}`) + "```", true)
+                .addField("Raw GPA Received", "```\n" + (`${specificResults.map(x => `${x.Term} ${x.AverageGradeReceived === -1 ? "N/A" : x.AverageGradeReceived.toFixed(2)} (${x.EvalsMade}/${x.Enrolled})`).join("\n")}`) + "```", true);
         }
 
         msg.channel.send(displayEmbed).catch(console.error);
