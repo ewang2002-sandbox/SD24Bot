@@ -1,4 +1,5 @@
 import { PermissionResolvable, Message } from "discord.js";
+import { IGuildDoc } from "./guild";
 
 export abstract class Command {
     public fullName: string;
@@ -50,5 +51,5 @@ export abstract class Command {
      * @param msg The message.
      * @param args The arguments.
      */
-    public abstract async execute(msg: Message, args: string[]): Promise<void>;
+    public abstract async execute(msg: Message, args: string[], guildDb?: IGuildDoc): Promise<void>;
 }

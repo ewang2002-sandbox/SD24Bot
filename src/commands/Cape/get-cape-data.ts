@@ -16,6 +16,7 @@ interface ICapeInput {
     subject: string;
     course: string;
     viewType: ViewType;
+    showRaw: boolean;
 }
 
 type ViewType = "ALL"
@@ -39,11 +40,11 @@ export class GetCapeData extends Command {
         super(
             "Get Cape Data",
             ["getcape", "cape"],
-            ["getcape", "getcape [-instructor (-i) Instructor Name (First Last)] [-subject (-s) Subject] [-course (-c) Course Number (DEPTXXX)] [-view (-v) 1 | 2] [-nomenu (-n)]"],
+            ["getcape", "getcape [-instructor (-i) Instructor Name (First Last)] [-subject (-s) Subject] [-course (-c) Course Number (DEPTXXX)] [-view (-v) 1 | 2] [-nomenu (-n)] [-raw (-r)]"],
             ["getcape", "getcape -instructor Swanson -course MATH 109", "getcape -subject MATH -instructor Stevens -v 1", "getcape -c CSE 11 -subject CSE"],
             [],
             ["MANAGE_MESSAGES"],
-            false,
+            true,
             false,
             0
         );
@@ -51,7 +52,7 @@ export class GetCapeData extends Command {
 
     public async execute(msg: Message, args: string[]): Promise<void> {
         let skipIfValid: boolean = false;
-        let capeInput: ICapeInput = { instructor: "", subject: "", course: "", viewType: "ALL" };
+        let capeInput: ICapeInput = { instructor: "", subject: "", course: "", viewType: "SPECIAL", showRaw: false };
         for (const arg of parseArguments(args)) {
             const argName: string = arg.argName.toLowerCase();
             if ((argName === "s" || argName === "subject")
@@ -71,6 +72,9 @@ export class GetCapeData extends Command {
             }
             else if ((argName === "n" || argName === "nomenu") && (capeInput.course !== "" || capeInput.instructor !== "")) {
                 skipIfValid = true;
+            }
+            else if ((argName === "r" || argName === "raw")) {
+                capeInput.showRaw = true;
             }
         }
 
@@ -134,10 +138,6 @@ export class GetCapeData extends Command {
             .setTitle("CAPE Search Results")
             .setDescription(`__Specified Criteria__\n⇒ **Instructor:** \`${capeInput.instructor === "" ? "N/A" : capeInput.instructor}\`\n⇒ **Course:** \`${capeInput.course === "" ? "N/A" : capeInput.course}\`\n⇒ **Subject:** \`${capeInput.subject === "" ? "N/A" : capeInput.subject}\``);
 
-        // no invalid entries allowed
-        results = results
-            .filter(x => ![x.Enrolled, x.EvalsMade, x.LearnedFromCourse, x.RecommendClass, x.RecommendInstructor, x.StudyHrsWk].includes(-1));
-
         if (results.length === 0) {
             returnEmbed.setColor("RED")
                 .setFooter(`${results.length} CAPEs Found.`);
@@ -149,7 +149,7 @@ export class GetCapeData extends Command {
         if (capeInput.viewType === "ALL") {
             const fields: string[] = arrayToStringFields<ICapeRow>(
                 results,
-                (i, elem) => `**\`[${i + 1}]\`** ${elem.CourseNumber} (${elem.Term})\n⇒ ${elem.Instructor}\n⇒ Evals/Enrolled: ${elem.EvalsMade}/${elem.Enrolled}\n⇒ Recmd Class: ${elem.RecommendClass}%\n⇒ Recmd Instructor: ${elem.RecommendInstructor}%\n⇒ Study Hours/Week: ${elem.StudyHrsWk}\n\n`
+                (i, elem) => `**\`[${i + 1}]\`** ${elem.CourseNumber} (${elem.Term})\n⇒ ${elem.Instructor}\n⇒ Evals/Enrolled: ${elem.EvalsMade}/${elem.Enrolled}\n⇒ Recmd Class: ${elem.RecommendClass}%\n⇒ Recmd Instructor: ${elem.RecommendInstructor}%\n⇒ Study Hours/Week: ${elem.StudyHrsWk}\n⇒ Average GPA Expected: ${elem.AverageGradeExpected}\n⇒ Average GPA Received: ${elem.AverageGradeReceived}\n\n`
             );
 
             returnEmbed.setColor("GREEN")
@@ -185,9 +185,9 @@ export class GetCapeData extends Command {
         if (instructors.length > 9 || courses.length > 9) {
             returnEmbed.setColor("RED")
                 .setFooter("Error")
-                .addField("Error: Too Many Results", `There are too many professors or courses to show. Please make your search criteria more specific. For your convenience, you can use this command (after making a few adjustments).\n${"```\n" + (`${SDBot.PREFIX}cape ${capeInput.course === "" ? "" : `-c ${capeInput.course} `}${capeInput.instructor === "" ? "" : `-i ${capeInput.instructor} `}${capeInput.subject === "" ? "" : `-s ${capeInput.subject} `}-v 2 -n`) + "```"}`)
+                .addField("Error: Too Many Results", `There are too many professors or courses to show. Please make your search criteria more specific. For your convenience, you can use this command to bring the previous menu up.${"```\n" + this.generateCommand(capeInput) + "```"}`)
                 .addField("All Possible Courses", courses.length === 0 ? "N/A" : courses.join(", "))
-                .addField("All Possible Instructors", instructors.length === 0 ? "N/A" : "- " + instructors.join("\n- "));
+                .addField("All Possible Instructors", instructors.length === 0 ? "N/A" : instructors.join("\n"));
 
             await msg.channel.send(returnEmbed).catch(console.error);
             return;
@@ -228,26 +228,60 @@ export class GetCapeData extends Command {
 
         const displayEmbed: MessageEmbed = new MessageEmbed()
             .setTitle("CAPE Search Results")
-            .setDescription(`__Specified Criteria__\n⇒ **Instructor:** \`${capeInput.instructor === "" ? "N/A" : capeInput.instructor}\`\n⇒ **Course:** \`${capeInput.course === "" ? "N/A" : capeInput.course}\`\n⇒ **Subject:** \`${capeInput.subject === "" ? "N/A" : capeInput.subject}\`\n\n__Search Result__\n⇒ **Instructor:** \`${selectInstructor}\`\n⇒ **Course:** \`${selectCourse}\`\n⇒ **Specific CAPEs:** \`${specificResults.length}\`\n⇒ **Evaluations:** \`${specificResults.map(x => x.EvalsMade).reduce((a, b) => a + b, 0)}\``)
+            .setDescription(`__Specified Criteria__\n⇒ **Instructor:** \`${capeInput.instructor === "" ? "N/A" : capeInput.instructor}\`\n⇒ **Course:** \`${capeInput.course === "" ? "N/A" : capeInput.course}\`\n⇒ **Subject:** \`${capeInput.subject === "" ? "N/A" : capeInput.subject}\`\n\n__Search Result__\n⇒ **Instructor:** \`${selectInstructor}\`\n⇒ **Course:** \`${selectCourse}\`\n⇒ **Specific CAPEs:** \`${specificResults.length}\`\n⇒ **Evaluations:** \`${specificResults.map(x => x.EvalsMade).reduce((a, b) => a + b, 0)}\`\n\n__Associated Command__${"```\n" + this.generateCommand(capeInput) + "```"}`)
             .setFooter("DISCLAIMER: What you see above may not be entirely accurate and is intended solely as a guide. Please use CAPE or Seascape (https://seascape.app/) to confirm the data shown above.")
             .setColor(0x000080);
 
-        const rcmdProf: [number, number] = this.getAverageAndStd(specificResults, "RecommendInstructor");
-        const rcmdClass: [number, number] = this.getAverageAndStd(specificResults, "RecommendClass");
-        const avgStudyHrs: [number, number] = this.getAverageAndStd(specificResults, "StudyHrsWk");
+        const rcmdProf: [number, number] = this.getAverageAndStd(
+            specificResults.filter(x => x.RecommendInstructor !== -1),
+            "RecommendInstructor"
+        );
+        const rcmdClass: [number, number] = this.getAverageAndStd(
+            specificResults.filter(x => x.RecommendClass !== -1),
+            "RecommendClass"
+        );
+        const avgStudyHrs: [number, number] = this.getAverageAndStd(
+            specificResults.filter(x => x.StudyHrsWk !== -1),
+            "StudyHrsWk"
+        );
+        const avgGpaExpected: [number, number] = this.getAverageAndStd(
+            specificResults.filter(x => x.AverageGradeExpected !== -1),
+            "AverageGradeExpected"
+        );
+        const avgGpaReceived: [number, number] = this.getAverageAndStd(
+            specificResults.filter(x => x.AverageGradeReceived !== -1),
+            "AverageGradeReceived"
+        );
 
         // get averages from other professors in the same class
         const otherProfSameCourse: ICapeRow[] = Object.values(list)
             .flat()
             .filter(x => x.CourseNumber === selectCourse);
-        const dataOtherProf: Collection<string, [number, number, number]> = new Collection<string, [number, number, number]>();
+        const dataOtherProf: Collection<string, [number, number, number, number, number]> = new Collection<string, [number, number, number, number, number]>();
 
         for (const data of otherProfSameCourse) {
             if (!dataOtherProf.has(data.Instructor)) {
                 dataOtherProf.set(data.Instructor, [
-                    this.getAverageAndStd(otherProfSameCourse.filter(x => x.Instructor === data.Instructor), "RecommendInstructor")[0],
-                    this.getAverageAndStd(otherProfSameCourse.filter(x => x.Instructor === data.Instructor), "RecommendClass")[0],
-                    this.getAverageAndStd(otherProfSameCourse.filter(x => x.Instructor === data.Instructor), "StudyHrsWk")[0]
+                    this.getAverageAndStd(
+                        otherProfSameCourse.filter(x => x.Instructor === data.Instructor && x.RecommendInstructor !== -1),
+                        "RecommendInstructor"
+                    )[0],
+                    this.getAverageAndStd(
+                        otherProfSameCourse.filter(x => x.Instructor === data.Instructor && x.RecommendClass !== -1),
+                        "RecommendClass"
+                    )[0],
+                    this.getAverageAndStd(
+                        otherProfSameCourse.filter(x => x.Instructor === data.Instructor && x.StudyHrsWk !== -1),
+                        "StudyHrsWk"
+                    )[0],
+                    this.getAverageAndStd(
+                        otherProfSameCourse.filter(x => x.Instructor === data.Instructor && x.AverageGradeExpected !== -1),
+                        "AverageGradeExpected"
+                    )[0],
+                    this.getAverageAndStd(
+                        otherProfSameCourse.filter(x => x.Instructor === data.Instructor && x.AverageGradeReceived !== -1),
+                        "AverageGradeReceived"
+                    )[0]
                 ]);
             }
         }
@@ -259,28 +293,39 @@ export class GetCapeData extends Command {
         const rankProf: string = this.getRankString(dataOtherProf, selectInstructor, 0);
         const rankClass: string = this.getRankString(dataOtherProf, selectInstructor, 1);
         const rankHrWk: string = this.getRankString(dataOtherProf, selectInstructor, 2);
+        const avgGpaExp: string = this.getRankString(dataOtherProf, selectInstructor, 3);
+        const avgGpaRec: string = this.getRankString(dataOtherProf, selectInstructor, 4);
 
         displayEmbed.addField("Recommend Professor", "```\n" + (`${rcmdProf[0].toFixed(3)}%`) + "```", true)
             .addField("Recommend Class", "```\n" + (`${rcmdClass[0].toFixed(3)}%`) + "```", true)
             .addField("Average Study Hours", "```\n" + (`${avgStudyHrs[0].toFixed(3)} Hrs/Week`) + "```")
+            .addField("Average GPA Expected", "```\n" + (avgGpaExpected[0].toFixed(3)) + "```", true)
+            .addField("Average GPA Received", "```\n" + (avgGpaReceived[0].toFixed(3)) + "```", true)
             .addField("Recommended Professor Rank", "```\n" + (rankProf) + "```")
             .addField("Recommended Class Rank", "```\n" + (rankClass) + "```")
             .addField("Average Study Hours/Week Rank", "```\n" + (rankHrWk) + "```")
-            .addField("Raw Rcmd. Prof.", "```\n" + (`${specificResults.map(x => `${x.Term} ${x.RecommendInstructor}% (${x.EvalsMade})`).join("\n")}`) + "```", true)
-            .addField("Raw Rcmd. Clas.", "```\n" + (`${specificResults.map(x => `${x.Term} ${x.RecommendClass}% (${x.EvalsMade})`).join("\n")}`) + "```", true)
-            .addField("Raw Study Hr/Wk.", "```\n" + (`${specificResults.map(x => `${x.Term} ${x.StudyHrsWk} (${x.EvalsMade})`).join("\n")}`) + "```", true);
+            .addField("Average GPA Expected Rank", "```\n" + (avgGpaExp) + "```")
+            .addField("Average GPA Received Rank", "```\n" + (avgGpaRec) + "```");
+        if (capeInput.showRaw) {
+            displayEmbed
+                .addField("Raw Rcmd. Prof.", "```\n" + (`${specificResults.map(x => `${x.Term} ${x.RecommendInstructor.toFixed(2)}% (${x.EvalsMade})`).join("\n")}`) + "```", true)
+                .addField("Raw Rcmd. Clas.", "```\n" + (`${specificResults.map(x => `${x.Term} ${x.RecommendClass.toFixed(2)}% (${x.EvalsMade})`).join("\n")}`) + "```", true)
+                .addField("Raw Study Hr/Wk.", "```\n" + (`${specificResults.map(x => `${x.Term} ${x.StudyHrsWk.toFixed(2)} (${x.EvalsMade}/${x.Enrolled})`).join("\n")}`) + "```", true)
+                .addField("Raw GPA Expected", "```\n" + (`${specificResults.map(x => `${x.Term} ${x.AverageGradeExpected.toFixed(2)} (${x.EvalsMade}/${x.Enrolled})`).join("\n")}`) + "```", true)
+                .addField("Raw GPA Received", "```\n" + (`${specificResults.map(x => `${x.Term} ${x.AverageGradeReceived.toFixed(2)} (${x.EvalsMade}/${x.Enrolled})`).join("\n")}`) + "```", true);
+        }
 
         msg.channel.send(displayEmbed).catch(e => { });
     }
 
-    private getRankString(dataOtherProf: Collection<string, [number, number, number]>, selectInstructor: string, index: number): string {
-        const ending: string = index === 2
+    private getRankString(dataOtherProf: Collection<string, [number, number, number, number, number]>, selectInstructor: string, index: number): string {
+        const ending: string = index >= 2
             ? ""
             : "%";
         dataOtherProf.sort(index === 2
             ? (a, b) => a[index] - b[index]
             : (a, b) => b[index] - a[index]);
-        const rankArrProf: [string, [number, number, number]][] = Array.from(dataOtherProf);
+        const rankArrProf: [string, [number, number, number, number, number]][] = Array.from(dataOtherProf);
         const profRank: number = rankArrProf.findIndex(x => x[0] === selectInstructor);
         let rankStrProf: string = "";
         if (rankArrProf.length > 3) {
@@ -464,6 +509,7 @@ export class GetCapeData extends Command {
                 .addField("Set Instructor", `React to the 🙆 emoji if you want to select an instructor to look up.\n⇒ **Current Instructor Set:** \`${capeInput.instructor === "" ? "N/A" : capeInput.instructor}\``)
                 .addField("Set Course Number", `React to the 📝 emoji if you want to select a course number to look up.\n⇒ **Current Course Set:** \`${capeInput.course === "" ? "N/A" : capeInput.course}\``)
                 .addField("Change Display Type", `React to the 🔹 emoji if you want the bot to either display the most recent CAPEs or a summary of all CAPEs.\n⇒ **Display Type:** \`${capeInput.viewType === "ALL" ? "Recent CAPEs" : "Summary"}\``)
+                .addField("Raw Data", `React to the 🔍 emoji if you want the bot to show or hide raw data. Raw data lets you view past CAPEs but will show way more data.\n⇒ **Show Raw?** \`${capeInput.showRaw ? "Yes" : "No"}\``)
                 .setFooter(canSearch ? "🟢 Able to Search" : "🔴 Unable to Search");
             if (canSearch) {
                 embed.addField("Search", "React to the ✅ emoji if you want to search using the specified criteria above.");
@@ -478,7 +524,7 @@ export class GetCapeData extends Command {
                 ? await msg.channel.send(createEmbed())
                 : await botMsg.edit(createEmbed());
 
-            let reactions: EmojiResolvable[] = ["❌", "🏫", "🙆", "📝", "🔹"];
+            let reactions: EmojiResolvable[] = ["❌", "🏫", "🙆", "📝", "🔹", "🔍"];
             if (capeInput.course !== "" || capeInput.instructor !== "")
                 reactions.push("✅");
 
@@ -490,7 +536,7 @@ export class GetCapeData extends Command {
             else {
                 for (const emoji of reactions)
                     await botMsg.react(emoji).catch(e => { });
-                
+
                 hasReacted = !hasReacted;
             }
 
@@ -508,7 +554,7 @@ export class GetCapeData extends Command {
                     await botMsg.delete().catch(e => { });
                     return "-cancel";
                 }
-                hasReacted = false; 
+                hasReacted = false;
                 capeInput = out;
             }
             else if (choice.name === "🙆") {
@@ -518,7 +564,7 @@ export class GetCapeData extends Command {
                     await botMsg.delete().catch(e => { });
                     return "-cancel";
                 }
-                hasReacted = false; 
+                hasReacted = false;
                 capeInput = out;
             }
             else if (choice.name === "📝") {
@@ -528,13 +574,18 @@ export class GetCapeData extends Command {
                     await botMsg.delete().catch(e => { });
                     return "-cancel";
                 }
-                hasReacted = false; 
+                hasReacted = false;
                 capeInput = out;
             }
             else if (choice.name === "🔹") {
                 capeInput.viewType = capeInput.viewType === "ALL"
                     ? "SPECIAL"
                     : "ALL";
+            }
+            else if (choice.name === "🔍") {
+                capeInput.showRaw = capeInput.showRaw
+                    ? false
+                    : true;
             }
             else if (choice.name === "✅" && reactions.includes("✅")) {
                 await botMsg.reactions.removeAll().catch(e => { });
@@ -637,6 +688,28 @@ export class GetCapeData extends Command {
             }
         }
     }
+    
+    private generateCommand(capeInput: ICapeInput): string {
+        let cmd: string = ";getcape"; 
+        if (capeInput.instructor !== "") {
+            cmd += ` -instructor ${capeInput.instructor}`;
+        }
 
+        if (capeInput.subject !== "") {
+            cmd += ` -subject ${capeInput.subject}`;
+        }
+
+        if (capeInput.course !== "") {
+            cmd += ` -course ${capeInput.course}`;
+        }
+
+        if (capeInput.showRaw) {
+            cmd += ` -raw`;
+        }
+
+        cmd += ` -view ${capeInput.viewType === "ALL" ? 1 : 2}`;
+
+        return cmd;
+    }
     //#endregion
 }

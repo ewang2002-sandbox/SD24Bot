@@ -12,5 +12,6 @@ export interface ICapeRow {
     RecommendClass: number;
     RecommendInstructor: number;
     StudyHrsWk: number;
-    LearnedFromCourse: number
+    AverageGradeExpected: number
+    AverageGradeReceived: number;
 }

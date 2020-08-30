@@ -1,22 +1,24 @@
 import { Message, ClientApplication, MessageEmbed, User, GuildMember } from "discord.js";
 import { Command } from "../templates/cmd";
 import { SDBot } from "../bot";
+import { IGuildDoc } from "../templates/guild";
+import { GuildMongoHelper } from "../helpers/mongo-helper";
 
 export async function onMessageEvent(msg: Message): Promise<void> {
     // make sure we have a regular message to handle
-    if (msg.type === "PINS_ADD") {
-        await msg.delete().catch(() => { });
-        return;
-    }
-
     if (msg.type !== "DEFAULT" || msg.author.bot) {
         return;
     }
 
-    await commandHandler(msg);
+    if (msg.guild === null) {
+        await commandHandler(msg);
+    }
+    else {
+        await commandHandler(msg, await GuildMongoHelper.createOrGetDoc(msg.guild));
+    }
 }
 
-async function commandHandler(msg: Message): Promise<void> {
+async function commandHandler(msg: Message, guildDb?: IGuildDoc): Promise<void> {
     let app: ClientApplication = await msg.client.fetchApplication();
 
     if (msg.webhookID !== null) {
@@ -86,7 +88,7 @@ async function commandHandler(msg: Message): Promise<void> {
 
         if (!canRunCommand) {
             embed.setTitle("**Missing Permissions**")
-                .setDescription("You are missing server permissions. Please use the help command to look up the permissions needed to run this command.");
+                .setDescription("You are missing server permissions. Pleas try again later.");
             msg.channel.send(embed)
                 .then(x => x.delete({ timeout: 5000 }))
                 .catch(() => { });
@@ -158,5 +160,5 @@ async function commandHandler(msg: Message): Promise<void> {
     }
 
     await msg.delete().catch(() => { });
-    command.execute(msg, args);
+    command.execute(msg, args, guildDb);
 }
