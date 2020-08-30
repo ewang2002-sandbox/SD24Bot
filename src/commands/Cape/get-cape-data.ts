@@ -134,6 +134,9 @@ export class GetCapeData extends Command {
             }
         }
 
+        results = results
+            .filter(x => x.Instructor !== "");
+
         const returnEmbed: MessageEmbed = new MessageEmbed()
             .setTitle("CAPE Search Results")
             .setAuthor(msg.author.tag, msg.author.displayAvatarURL())
@@ -188,7 +191,7 @@ export class GetCapeData extends Command {
                 .setFooter("Error")
                 .addField("️⚠ Error: Too Many Results", `There are too many professors or courses to show. Please make your search criteria more specific. For your convenience, use the associated command up to bring up the previous menu.`)
                 .addField("Recent Courses", courses.length === 0 ? "N/A" : courses.slice(0, 30).join(", "))
-                .addField("All Possible Instructors", instructors.length === 0 ? "N/A" : instructors.slice(0, 15).join("\n"));
+                .addField("Recent Instructors", instructors.length === 0 ? "N/A" : instructors.slice(0, 15).join("\n"));
 
             await msg.channel.send(returnEmbed).catch(console.error);
             return;
@@ -317,7 +320,7 @@ export class GetCapeData extends Command {
                 .addField("Raw GPA Received", "```\n" + (`${specificResults.map(x => `${x.Term} ${x.AverageGradeReceived.toFixed(2)} (${x.EvalsMade}/${x.Enrolled})`).join("\n")}`) + "```", true);
         }
 
-        msg.channel.send(displayEmbed).catch(e => { });
+        msg.channel.send(displayEmbed).catch(console.error);
     }
 
     private getRankString(dataOtherProf: Collection<string, [number, number, number, number, number]>, selectInstructor: string, index: number): string {
