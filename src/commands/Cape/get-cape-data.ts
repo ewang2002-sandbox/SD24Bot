@@ -67,8 +67,8 @@ export class GetCapeData extends Command {
             }
             else if ((argName === "v" || argName === "view") && arg.argVal.length !== 0) {
                 const type: string = arg.argVal[0].toLowerCase();
-                if (type === "all" || type === "1") capeInput.viewType = "ALL";
-                else if (type === "spe" || type === "2") capeInput.viewType = "SPECIAL";
+                if (type === "all" || type === "1") capeInput.viewType = "SPECIAL";
+                else if (type === "spe" || type === "2") capeInput.viewType = "ALL";
             }
             else if ((argName === "n" || argName === "nomenu") && (capeInput.course !== "" || capeInput.instructor !== "")) {
                 skipIfValid = true;
@@ -136,7 +136,8 @@ export class GetCapeData extends Command {
 
         const returnEmbed: MessageEmbed = new MessageEmbed()
             .setTitle("CAPE Search Results")
-            .setDescription(`__Specified Criteria__\n⇒ **Instructor:** \`${capeInput.instructor === "" ? "N/A" : capeInput.instructor}\`\n⇒ **Course:** \`${capeInput.course === "" ? "N/A" : capeInput.course}\`\n⇒ **Subject:** \`${capeInput.subject === "" ? "N/A" : capeInput.subject}\``);
+            .setAuthor(msg.author.tag, msg.author.displayAvatarURL())
+            .setDescription(`__Specified Criteria__\n⇒ **Instructor:** \`${capeInput.instructor === "" ? "N/A" : capeInput.instructor}\`\n⇒ **Course:** \`${capeInput.course === "" ? "N/A" : capeInput.course}\`\n⇒ **Subject:** \`${capeInput.subject === "" ? "N/A" : capeInput.subject}\`\n\n__Associated Command__${"```\n" + this.generateCommand(capeInput) + "```"}`);
 
         if (results.length === 0) {
             returnEmbed.setColor("RED")
@@ -185,9 +186,9 @@ export class GetCapeData extends Command {
         if (instructors.length > 9 || courses.length > 9) {
             returnEmbed.setColor("RED")
                 .setFooter("Error")
-                .addField("Error: Too Many Results", `There are too many professors or courses to show. Please make your search criteria more specific. For your convenience, you can use this command to bring the previous menu up.${"```\n" + this.generateCommand(capeInput) + "```"}`)
-                .addField("All Possible Courses", courses.length === 0 ? "N/A" : courses.join(", "))
-                .addField("All Possible Instructors", instructors.length === 0 ? "N/A" : instructors.join("\n"));
+                .addField("️⚠ Error: Too Many Results", `There are too many professors or courses to show. Please make your search criteria more specific. For your convenience, use the associated command up to bring up the previous menu.`)
+                .addField("Recent Courses", courses.length === 0 ? "N/A" : courses.slice(0, 30).join(", "))
+                .addField("All Possible Instructors", instructors.length === 0 ? "N/A" : instructors.slice(0, 15).join("\n"));
 
             await msg.channel.send(returnEmbed).catch(console.error);
             return;
@@ -228,6 +229,7 @@ export class GetCapeData extends Command {
 
         const displayEmbed: MessageEmbed = new MessageEmbed()
             .setTitle("CAPE Search Results")
+            .setAuthor(msg.author.tag, msg.author.displayAvatarURL())
             .setDescription(`__Specified Criteria__\n⇒ **Instructor:** \`${capeInput.instructor === "" ? "N/A" : capeInput.instructor}\`\n⇒ **Course:** \`${capeInput.course === "" ? "N/A" : capeInput.course}\`\n⇒ **Subject:** \`${capeInput.subject === "" ? "N/A" : capeInput.subject}\`\n\n__Search Result__\n⇒ **Instructor:** \`${selectInstructor}\`\n⇒ **Course:** \`${selectCourse}\`\n⇒ **Specific CAPEs:** \`${specificResults.length}\`\n⇒ **Evaluations:** \`${specificResults.map(x => x.EvalsMade).reduce((a, b) => a + b, 0)}\`\n\n__Associated Command__${"```\n" + this.generateCommand(capeInput) + "```"}`)
             .setFooter("DISCLAIMER: What you see above may not be entirely accurate and is intended solely as a guide. Please use CAPE or Seascape (https://seascape.app/) to confirm the data shown above.")
             .setColor(0x000080);
@@ -391,6 +393,7 @@ export class GetCapeData extends Command {
 
         const embed: MessageEmbed = new MessageEmbed()
             .setTitle(`CAPE Lookup ⇒ Select ${title}`)
+            .setAuthor(originalMessage.author.tag, originalMessage.author.displayAvatarURL())
             .setColor(0x000080)
             .setDescription(instructions)
             .setFooter("React to ❌ if you want to cancel this.");
@@ -502,6 +505,7 @@ export class GetCapeData extends Command {
             let canSearch: boolean = capeInput.course !== "" || capeInput.instructor !== "";
             const embed: MessageEmbed = new MessageEmbed()
                 .setTitle("Configure CAPE Lookup")
+                .setAuthor(msg.author.tag, msg.author.displayAvatarURL())
                 .setColor(0x000080)
                 .setDescription("To look up a result, you must either select an instructor or course.")
                 .addField("Cancel Process", "React to the ❌ emoji if you don't want to search at this time.")
@@ -509,7 +513,7 @@ export class GetCapeData extends Command {
                 .addField("Set Instructor", `React to the 🙆 emoji if you want to select an instructor to look up.\n⇒ **Current Instructor Set:** \`${capeInput.instructor === "" ? "N/A" : capeInput.instructor}\``)
                 .addField("Set Course Number", `React to the 📝 emoji if you want to select a course number to look up.\n⇒ **Current Course Set:** \`${capeInput.course === "" ? "N/A" : capeInput.course}\``)
                 .addField("Change Display Type", `React to the 🔹 emoji if you want the bot to either display the most recent CAPEs or a summary of all CAPEs.\n⇒ **Display Type:** \`${capeInput.viewType === "ALL" ? "Recent CAPEs" : "Summary"}\``)
-                .addField("Raw Data", `React to the 🔍 emoji if you want the bot to show or hide raw data. Raw data lets you view past CAPEs but will show way more data.\n⇒ **Show Raw?** \`${capeInput.showRaw ? "Yes" : "No"}\``)
+                .addField("Raw Data", `React to the 🔍 emoji if you want the bot to show or hide raw data. Raw data lets you view data from CAPEs; however, the embed message will be huge. This will only be applied if you choose "Summary" in "Change Display Type" (above).\n⇒ **Show Raw?** \`${capeInput.showRaw ? "Yes" : "No"}\``)
                 .setFooter(canSearch ? "🟢 Able to Search" : "🔴 Unable to Search");
             if (canSearch) {
                 embed.addField("Search", "React to the ✅ emoji if you want to search using the specified criteria above.");
@@ -599,6 +603,7 @@ export class GetCapeData extends Command {
         const embed: MessageEmbed = new MessageEmbed()
             .setTitle("Configure CAPE Lookup ⇒ Subject")
             .setColor(0x000080)
+            .setAuthor(msg.author.tag, msg.author.displayAvatarURL())
             .setDescription(`⇒ **Current Subject:** \`${capeInput.subject === "" ? "N/A" : capeInput.subject}\`\n\nType the subject that you want to look up. The subject can either be the letter code or the name of the subject.\n\n__Valid Example Inputs__\n- MATH\n- CSE\n- Mathematics\n- Computer Science`)
             .addField("Reactions", "⇒ React to the ❌ emoji if you don't want to set the subject.\n⇒ React to the 🗑️ emoji if you want to clear the current selection.")
             .addField("Note", "If your input is valid, the bot should automatically update it in the main menu. If not, the bot won't say anything.")
@@ -630,6 +635,7 @@ export class GetCapeData extends Command {
         const embed: MessageEmbed = new MessageEmbed()
             .setTitle("Configure CAPE Lookup ⇒ Instructor")
             .setColor(0x000080)
+            .setAuthor(msg.author.tag, msg.author.displayAvatarURL())
             .setDescription(`⇒ **Current Instructor:** \`${capeInput.instructor === "" ? "N/A" : capeInput.instructor}\`\n\nType the instructor that you want to look up. The instructor's name should begin with a first name and end with the last name.\n\n__Valid Example Inputs__\n- Joshua Swanson\n- Joshua P Swanson\n- Joshua P. Swanson\n- J Swanson\n- Swanson\n- Joshua`)
             .addField("Reactions", "⇒ React to the ❌ emoji if you don't want to set the instructor.\n⇒ React to the 🗑️ emoji if you want to clear the current selection.")
             .addField("Note", "If your input is valid, the bot should automatically update it in the main menu. If not, the bot won't say anything.")
@@ -659,6 +665,7 @@ export class GetCapeData extends Command {
         const embed: MessageEmbed = new MessageEmbed()
             .setTitle("Configure CAPE Lookup ⇒ Course Number")
             .setColor(0x000080)
+            .setAuthor(msg.author.tag, msg.author.displayAvatarURL())
             .setDescription(`⇒ **Current Course Number:** \`${capeInput.course === "" ? "N/A" : capeInput.course}\`\n\nType the course number that you want to look up. Your course number should start with the subject code and end with actual numbers. Spacing doesn't matter.\n\n__Valid Example Inputs__\n- CSE 8B\n- MATH109\n- MATH 20B\n- CSE 11`)
             .addField("Reactions", "⇒ React to the ❌ emoji if you don't want to set the course number.\n⇒ React to the 🗑️ emoji if you want to clear the current selection.")
             .addField("Note", "If your input is valid, the bot should automatically update it in the main menu. If not, the bot won't say anything.")
@@ -707,7 +714,7 @@ export class GetCapeData extends Command {
             cmd += ` -raw`;
         }
 
-        cmd += ` -view ${capeInput.viewType === "ALL" ? 1 : 2}`;
+        cmd += ` -view ${capeInput.viewType === "ALL" ? 2 : 1}`;
 
         return cmd;
     }
