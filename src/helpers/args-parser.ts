@@ -3,6 +3,11 @@ export interface IParsedArgs {
     argVal: string[];
 }
 
+/**
+ * A simple function that attenots to parses an array of string elements based on flags. 
+ * @param {string[]} args The arguments that were passed through a command. 
+ * @returns {IParsedArgs[]} All the arguments that were parsed.
+ */
 export function parseArguments(args: string[]): IParsedArgs[] {
     const returnVal: IParsedArgs[] = [];
 

@@ -8,6 +8,14 @@ export module CollectorManager {
         removeAllEmojisAfter?: boolean;
     }
 
+    /**
+     * Gets the first emoji that a person responds to.
+     * @param {Message} botMsg The bot message.
+     * @param {Message} origMsg The original message (from a human),
+     * @param {EmojiResolvable[]} emojis The emojis to react to
+     * @param {IOptionalArgs} [optArgs = {}] Any optional arguments.
+     * @returns {(Emoji | "-cancel")} The emoji, or `-cancel` if the person cancels the collector or time runs out.
+     */
     export async function getEmoji(
         botMsg: Message,
         origMsg: Message,
@@ -47,6 +55,14 @@ export module CollectorManager {
         });
     }
 
+    /**
+     * Gets the first emoji OR message that a person responds to.
+     * @param {Message} botMsg The bot message.
+     * @param {Message} origMsg The original message (from a human),
+     * @param {EmojiResolvable[]} emojis The emojis to react to
+     * @param {IOptionalArgs} [optArgs = {}] Any optional arguments.
+     * @returns {(Emoji | "-cancel")} The emoji or message content or `-cancel` if the person cancels the collector or time runs out.
+     */
     export async function getEitherEmojiOrString(
         botMsg: Message,
         origMsg: Message,

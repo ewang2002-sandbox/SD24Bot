@@ -237,26 +237,38 @@ export class GetCapeData extends Command {
             .setFooter("DISCLAIMER: What you see above may not be entirely accurate and is intended solely as a guide. Please use CAPE or Seascape (https://seascape.app/) to confirm the data shown above.")
             .setColor(0x000080);
 
-        const rcmdProf: [number, number] = this.getAverageAndStd(
+        let rcmdProf: [number, number] = this.getAverageAndStd(
             specificResults.filter(x => x.RecommendInstructor !== -1),
             "RecommendInstructor"
         );
-        const rcmdClass: [number, number] = this.getAverageAndStd(
+        let rcmdClass: [number, number] = this.getAverageAndStd(
             specificResults.filter(x => x.RecommendClass !== -1),
             "RecommendClass"
         );
-        const avgStudyHrs: [number, number] = this.getAverageAndStd(
+        let avgStudyHrs: [number, number] = this.getAverageAndStd(
             specificResults.filter(x => x.StudyHrsWk !== -1),
             "StudyHrsWk"
         );
-        const avgGpaExpected: [number, number] = this.getAverageAndStd(
+        let avgGpaExpected: [number, number] = this.getAverageAndStd(
             specificResults.filter(x => x.AverageGradeExpected !== -1),
             "AverageGradeExpected"
         );
-        const avgGpaReceived: [number, number] = this.getAverageAndStd(
+        let avgGpaReceived: [number, number] = this.getAverageAndStd(
             specificResults.filter(x => x.AverageGradeReceived !== -1),
             "AverageGradeReceived"
         );
+
+        // in case the instructors so happen to not
+        // submit grades 
+        if (Number.isNaN(avgGpaExpected[0])) {
+            avgGpaExpected[0] = -1;
+            avgGpaExpected[1] = -1;
+        }
+
+        if (Number.isNaN(avgGpaReceived[0])) {
+            avgGpaReceived[0] = -1;
+            avgGpaReceived[1] = -1;
+        }
 
         // get averages from other professors in the same class
         const otherProfSameCourse: ICapeRow[] = Object.values(list)
@@ -266,6 +278,15 @@ export class GetCapeData extends Command {
 
         for (const data of otherProfSameCourse) {
             if (!dataOtherProf.has(data.Instructor)) {
+                const avgGpaExpForProf: number = this.getAverageAndStd(
+                    otherProfSameCourse.filter(x => x.Instructor === data.Instructor && x.AverageGradeExpected !== -1),
+                    "AverageGradeExpected"
+                )[0];
+                const avgGpaEarForProf: number = this.getAverageAndStd(
+                    otherProfSameCourse.filter(x => x.Instructor === data.Instructor && x.AverageGradeReceived !== -1),
+                    "AverageGradeReceived"
+                )[0];
+
                 dataOtherProf.set(data.Instructor, [
                     this.getAverageAndStd(
                         otherProfSameCourse.filter(x => x.Instructor === data.Instructor && x.RecommendInstructor !== -1),
@@ -279,14 +300,12 @@ export class GetCapeData extends Command {
                         otherProfSameCourse.filter(x => x.Instructor === data.Instructor && x.StudyHrsWk !== -1),
                         "StudyHrsWk"
                     )[0],
-                    this.getAverageAndStd(
-                        otherProfSameCourse.filter(x => x.Instructor === data.Instructor && x.AverageGradeExpected !== -1),
-                        "AverageGradeExpected"
-                    )[0],
-                    this.getAverageAndStd(
-                        otherProfSameCourse.filter(x => x.Instructor === data.Instructor && x.AverageGradeReceived !== -1),
-                        "AverageGradeReceived"
-                    )[0]
+                    Number.isNaN(avgGpaExpForProf)
+                        ? -1
+                        : avgGpaExpForProf,
+                    Number.isNaN(avgGpaEarForProf)
+                        ? -1
+                        : avgGpaEarForProf
                 ]);
             }
         }
@@ -303,14 +322,14 @@ export class GetCapeData extends Command {
 
         displayEmbed.addField("Recommend Professor", "```\n" + (`${rcmdProf[0].toFixed(3)}%`) + "```", true)
             .addField("Recommend Class", "```\n" + (`${rcmdClass[0].toFixed(3)}%`) + "```", true)
-            .addField("Average Study Hours", "```\n" + (`${avgStudyHrs[0].toFixed(3)} Hrs/Week`) + "```")
-            .addField("Average GPA Expected", "```\n" + (avgGpaExpected[0].toFixed(3)) + "```", true)
-            .addField("Average GPA Received", "```\n" + (avgGpaReceived[0].toFixed(3)) + "```", true)
+            .addField("Average Study Hours", "```\n" + (`${avgStudyHrs[0] === -1 ? "Not Available" : avgStudyHrs[0].toFixed(3)} Hrs/Week`) + "```")
+            .addField("Average GPA Expected", "```\n" + (avgGpaExpected[0] === -1 ? "Not Available" : avgGpaExpected[0].toFixed(3)) + "```", true)
+            .addField("Average GPA Received", "```\n" + (avgGpaReceived[0] === -1 ? "Not Available" : avgGpaReceived[0].toFixed(3)) + "```", true)
             .addField("Recommended Professor Rank", "```\n" + (rankProf) + "```")
             .addField("Recommended Class Rank", "```\n" + (rankClass) + "```")
             .addField("Average Study Hours/Week Rank", "```\n" + (rankHrWk) + "```")
-            .addField("Average GPA Expected Rank", "```\n" + (avgGpaExp) + "```")
-            .addField("Average GPA Received Rank", "```\n" + (avgGpaRec) + "```");
+            .addField("Average GPA Expected Rank", "```\n" + (avgGpaExp.length === 0 ? "No Data." : avgGpaExp) + "```")
+            .addField("Average GPA Received Rank", "```\n" + (avgGpaRec.length === 0 ? "No Data." : avgGpaRec) + "```");
         if (capeInput.showRaw) {
             displayEmbed
                 .addField("Raw Rcmd. Prof.", "```\n" + (`${specificResults.map(x => `${x.Term} ${x.RecommendInstructor.toFixed(2)}% (${x.EvalsMade})`).join("\n")}`) + "```", true)
@@ -327,11 +346,16 @@ export class GetCapeData extends Command {
         const ending: string = index >= 2
             ? ""
             : "%";
+        // remove invalid entries aka "-1"
+        dataOtherProf = dataOtherProf
+            .filter(x => x[index] !== -1);
+
         dataOtherProf.sort(index === 2
             ? (a, b) => a[index] - b[index]
             : (a, b) => b[index] - a[index]);
         const rankArrProf: [string, [number, number, number, number, number]][] = Array.from(dataOtherProf);
-        const profRank: number = rankArrProf.findIndex(x => x[0] === selectInstructor);
+        const profRank: number = rankArrProf
+            .findIndex(x => x[0] === selectInstructor);
         let rankStrProf: string = "";
         if (rankArrProf.length > 3) {
             let profFoundInTop3: boolean = false;
@@ -345,9 +369,15 @@ export class GetCapeData extends Command {
                 rankStrProf += `[${rankArrProf.length}] ${rankArrProf[rankArrProf.length - 1][0]} (${rankArrProf[rankArrProf.length - 1][1][index].toFixed(2)}${ending})`;
             }
             else {
-                rankStrProf += rankArrProf.length === profRank + 1
-                    ? `[${rankArrProf.length}] ${rankArrProf[rankArrProf.length - 1][0]} (${rankArrProf[rankArrProf.length - 1][1][index].toFixed(2)}${ending}) ⭐`
-                    : `[${profRank + 1}] ${rankArrProf[profRank][0]} (${rankArrProf[profRank][1][index].toFixed(2)}${ending}) ⭐ \n[${rankArrProf.length}] ${rankArrProf[rankArrProf.length - 1][0]} (${rankArrProf[rankArrProf.length - 1][1][index].toFixed(2)}${ending})`;
+                // in case the prof's entry happened to be invalid and was thus filtered out
+                if (profRank === -1) {
+                    rankStrProf += `[${rankArrProf.length}] ${rankArrProf[rankArrProf.length - 1][0]} (${rankArrProf[rankArrProf.length - 1][1][index].toFixed(2)}${ending})`;
+                }
+                else {
+                    rankStrProf += rankArrProf.length === profRank + 1
+                        ? `[${rankArrProf.length}] ${rankArrProf[rankArrProf.length - 1][0]} (${rankArrProf[rankArrProf.length - 1][1][index].toFixed(2)}${ending}) ⭐`
+                        : `[${profRank + 1}] ${rankArrProf[profRank][0]} (${rankArrProf[profRank][1][index].toFixed(2)}${ending}) ⭐ \n[${rankArrProf.length}] ${rankArrProf[rankArrProf.length - 1][0]} (${rankArrProf[rankArrProf.length - 1][1][index].toFixed(2)}${ending})`;
+                }
             }
         }
         else {
@@ -698,9 +728,9 @@ export class GetCapeData extends Command {
             }
         }
     }
-    
+
     private generateCommand(capeInput: ICapeInput): string {
-        let cmd: string = ";getcape"; 
+        let cmd: string = ";getcape";
         if (capeInput.instructor !== "") {
             cmd += ` -instructor ${capeInput.instructor}`;
         }

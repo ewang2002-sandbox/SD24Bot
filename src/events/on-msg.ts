@@ -10,12 +10,9 @@ export async function onMessageEvent(msg: Message): Promise<void> {
         return;
     }
 
-    if (msg.guild === null) {
-        await commandHandler(msg);
-    }
-    else {
-        await commandHandler(msg, await GuildMongoHelper.createOrGetDoc(msg.guild));
-    }
+    msg.guild === null
+        ? await commandHandler(msg)
+        : await commandHandler(msg, await GuildMongoHelper.createOrGetDoc(msg.guild));
 }
 
 async function commandHandler(msg: Message, guildDb?: IGuildDoc): Promise<void> {
