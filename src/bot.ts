@@ -70,7 +70,7 @@ export class SDBot {
      */
     public async login(): Promise<void> {
         try {
-            const dbUrl: string | undefined = process.env["GUILD_DB_NAME"];
+            const dbUrl: string | undefined = process.env["CONNECTION_URL"];
             const dbName: string | undefined = process.env["DB_NAME"];
             const guildCollectionName: string | undefined = process.env["GUILD_COLLECTION_NAME"];
     
